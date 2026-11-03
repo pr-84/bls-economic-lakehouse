@@ -1,4 +1,5 @@
 import os
+import re
 import logging
 import requests
 from bs4 import BeautifulSoup
@@ -21,7 +22,7 @@ class BLSDataIngestor:
 
     def __init__(self, target_volume_path: str, user_email: str):
         self.target_volume_path = target_volume_path
-        # Custom User-Agent header with email required by BLS policy to bypass 403 Forbidden
+        # BLS policy requires User-Agent with contact email to avoid HTTP 403 Forbidden
         self.headers = {"User-Agent": f"DataEngineeringQuest ({user_email})"}
         
         if not os.path.exists(self.target_volume_path):
@@ -34,20 +35,32 @@ class BLSDataIngestor:
         response.raise_for_status()
 
         soup = BeautifulSoup(response.text, "html.parser")
-        files = []
+        files = set()
         for link in soup.find_all("a"):
             href = link.get("href", "")
             if not href:
                 continue
-            
-            # Extract clean filename regardless of relative or absolute paths
+
+            # Extract filename from path (e.g., '/pub/time.series/pr/pr.class' -> 'pr.class')
             filename = href.rstrip("/").split("/")[-1]
-            
-            # BLS productivity dataset files start with 'pr.' (e.g., pr.data.1.AllData, pr.series)
+
+            # All BLS productivity dataset files start with 'pr.' (e.g., pr.data.1.AllData, pr.series)
             if filename.startswith("pr."):
-                files.append(filename)
-                
-        return sorted(list(set(files)))
+                files.add(filename)
+
+        # Fallback for unexpected/malformed directory listings where anchors are not parsed cleanly.
+        if not files:
+            files.update(re.findall(r"\bpr\.[A-Za-z0-9._]+\b", response.text))
+
+        if not files:
+            preview = response.text[:500].replace("\n", " ")
+            raise RuntimeError(
+                "BLS directory listing returned no dataset files. "
+                "The source may have returned an unexpected page or blocked the request. "
+                f"Response preview: {preview}"
+            )
+
+        return sorted(files)
 
     def ingest_bls_directory(self) -> None:
         """Download remote BLS files idempotently into target Volume."""
