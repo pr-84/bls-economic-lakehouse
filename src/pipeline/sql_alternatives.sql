@@ -1,10 +1,13 @@
+-- Assumes the Lakeflow Spark Declarative Pipeline target schema is macroeconomic_data.raw_data.
+
 -- Question 1 Alternative: Spark SQL
 SELECT
   AVG(population) AS mean_population,
   STDDEV(population) AS stddev_population,
   COUNT(population) AS year_count
 FROM macroeconomic_data.raw_data.silver_population
-WHERE year BETWEEN 2013 AND 2018;
+WHERE nation = 'United States'
+  AND year BETWEEN 2013 AND 2018;
 
 -- Question 2 Alternative: Spark SQL
 WITH quarterly_sums AS (
@@ -13,7 +16,8 @@ WITH quarterly_sums AS (
     year,
     SUM(value) AS annual_sum
   FROM macroeconomic_data.raw_data.silver_bls_data
-  WHERE period LIKE 'Q%' AND period != 'Q55'
+  WHERE period LIKE 'Q%'
+    AND period != 'Q55'
   GROUP BY series_id, year
 ),
 ranked_series AS (
@@ -21,7 +25,10 @@ ranked_series AS (
     series_id,
     year AS best_year,
     annual_sum,
-    ROW_NUMBER() OVER (PARTITION BY series_id ORDER BY annual_sum DESC) AS rnk
+    ROW_NUMBER() OVER (
+      PARTITION BY series_id
+      ORDER BY annual_sum DESC, year DESC
+    ) AS rnk
   FROM quarterly_sums
 )
 SELECT
@@ -42,7 +49,12 @@ SELECT
   b.value,
   p.population
 FROM macroeconomic_data.raw_data.silver_bls_data b
-LEFT JOIN macroeconomic_data.raw_data.silver_population p
+LEFT JOIN (
+  SELECT year, population
+  FROM macroeconomic_data.raw_data.silver_population
+  WHERE nation = 'United States'
+) p
   ON b.year = p.year
-WHERE b.series_id = 'PRS30006032' AND b.period = 'Q01'
+WHERE b.series_id = 'PRS30006032'
+  AND b.period = 'Q01'
 ORDER BY b.year;
