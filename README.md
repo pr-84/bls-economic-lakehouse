@@ -14,12 +14,12 @@ This project packages a small medallion architecture example on Databricks using
 
 ## 🚀 Key Engineering Features
 
-* **Compliant & Idempotent Ingestion:** Appends custom `User-Agent` contact headers to bypass BLS `403 Forbidden` restrictions. Utilizes dynamic regex scraping to handle inconsistent HTML directory paths.
-* **Data Quality & Schema Resilience:** 
+- **Compliant & Idempotent Ingestion:** Appends custom `User-Agent` contact headers to bypass BLS `403 Forbidden` restrictions. Utilizes dynamic regex scraping to handle inconsistent HTML directory paths.
+- **Data Quality & Schema Resilience:** 
   * **Header Normalization:** Dynamically trims invisible whitespace from tab-padded BLS headers (e.g., `series_id    \t`).
   * **Identifier Integrity:** Explicitly casts dimensional codes as strings to prevent Spark's schema inference from truncating leading zeros.
   * **Expectations:** Enforces strict pipeline data quality via `@dlt.expect_or_drop` on primary keys.
-* **Deterministic Aggregations:** Calculates the best year per series using window functions (`ROW_NUMBER()`) with multi-column sorting to ensure deterministic tie-breaking.
+- **Deterministic Aggregations:** Calculates the best year per series using window functions (`ROW_NUMBER()`) with multi-column sorting to ensure deterministic tie-breaking.
 
 ## Data targets
 
@@ -61,3 +61,12 @@ Run these commands from the repository root after authenticating the Databricks 
 ```sh
 databricks bundle validate
 databricks bundle deploy -t dev
+```
+
+After deploy, run the pipeline from the Databricks UI or use the Databricks CLI pipeline commands if desired.
+
+## Notes for other users
+
+- GitHub access to this repository does not automatically grant access to the Databricks workspace, Unity Catalog tables, or the UC volume.
+- If you want to deploy to a different catalog or schema, update bundle variables or add additional targets in `databricks.yml`.
+- The dashboard definition is embedded in `databricks.yml`, so if you change the dashboard in the UI later, re-export or regenerate the bundled dashboard content before redeploying.
