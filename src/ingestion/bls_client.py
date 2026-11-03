@@ -36,10 +36,17 @@ class BLSDataIngestor:
         soup = BeautifulSoup(response.text, "html.parser")
         files = []
         for link in soup.find_all("a"):
-            href = link.get("href")
-            # Filter out parent directories and query params
-            if href and not href.startswith("?") and not href.startswith("/") and href != "../":
-                files.append(href.split("/")[-1])
+            href = link.get("href", "")
+            if not href:
+                continue
+            
+            # Extract filename from path (e.g., '/pub/time.series/pr/pr.class' -> 'pr.class')
+            filename = href.rstrip("/").split("/")[-1]
+            
+            # All BLS productivity dataset files start with 'pr.' (e.g., pr.data.1.AllData, pr.series)
+            if filename.startswith("pr."):
+                files.append(filename)
+                
         return files
 
     def ingest_bls_directory(self) -> None:
