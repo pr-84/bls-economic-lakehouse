@@ -21,7 +21,7 @@ class BLSDataIngestor:
 
     def __init__(self, target_volume_path: str, user_email: str):
         self.target_volume_path = target_volume_path
-        # BLS policy requires User-Agent with contact email to avoid HTTP 403 Forbidden
+        # Custom User-Agent header with email required by BLS policy to bypass 403 Forbidden
         self.headers = {"User-Agent": f"DataEngineeringQuest ({user_email})"}
         
         if not os.path.exists(self.target_volume_path):
@@ -40,14 +40,14 @@ class BLSDataIngestor:
             if not href:
                 continue
             
-            # Extract filename from path (e.g., '/pub/time.series/pr/pr.class' -> 'pr.class')
+            # Extract clean filename regardless of relative or absolute paths
             filename = href.rstrip("/").split("/")[-1]
             
-            # All BLS productivity dataset files start with 'pr.' (e.g., pr.data.1.AllData, pr.series)
+            # BLS productivity dataset files start with 'pr.' (e.g., pr.data.1.AllData, pr.series)
             if filename.startswith("pr."):
                 files.append(filename)
                 
-        return files
+        return sorted(list(set(files)))
 
     def ingest_bls_directory(self) -> None:
         """Download remote BLS files idempotently into target Volume."""
