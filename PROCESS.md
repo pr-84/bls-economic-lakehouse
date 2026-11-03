@@ -1,7 +1,7 @@
 # Thought Process & Methodology
 
 ## Architecture & Design Choices
-I designed a Medallion Lakehouse architecture using Databricks Unity Catalog and Delta Live Tables (DLT) to ensure a robust, governable, and scalable pipeline.
+I designed a Medallion Lakehouse architecture using Databricks Unity Catalog and Spark Declarative Pipelines (Delta Live Tables) to ensure a robust, governable, and scalable pipeline.
 
 - **Ingestion:** I built a custom Python OOP client (`BLSDataIngestor`) to handle BLS's strict crawling policies. By passing a custom `User-Agent` header containing contact details, the pipeline bypasses HTTP 403 Forbidden restrictions. The script uses a regex fallback to dynamically parse directory links (handling both relative and absolute paths) and lands the raw data idempotently into a Unity Catalog Volume. To handle re-running ingestion safely, the client checks the Volume for existing files before downloading, ensuring the script can be triggered repeatedly without duplicating data or causing unnecessary network overhead.
 - **Medallion Pipeline (DLT):** 
